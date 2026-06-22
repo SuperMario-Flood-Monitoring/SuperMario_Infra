@@ -10,6 +10,7 @@ SuperMario_Infra Actions -> Bootstrap Production
   -> Decode PRODUCTION_ENV_YAML_B64
   -> Upload /home/seoktae/Documents/TEAM_SUPERMARIO/.env
   -> Optionally run server-init.sh
+  -> Optionally login the server to GHCR
   -> Issue initial Let's Encrypt certificate
   -> Start nginx + certbot renewal container
 ```
@@ -22,6 +23,7 @@ Service repo prod push
   -> Push image to GHCR
   -> Send repository_dispatch to SuperMario_Infra
   -> SuperMario_Infra workflow SSHs to server
+  -> Server logs in to GHCR when credentials are configured
   -> New image is pulled on the inactive color
   -> Health check passes
   -> nginx upstream switches to the new color
@@ -62,7 +64,11 @@ SERVER_PORT
 SSH_PRIVATE_KEY
 DEPLOY_PATH
 PRODUCTION_ENV_YAML_B64
+GHCR_USERNAME
+GHCR_TOKEN
 ```
+
+`GHCR_USERNAME` and `GHCR_TOKEN` are only required when GHCR packages are private. `GHCR_TOKEN` needs package read access.
 
 In each public service repository:
 

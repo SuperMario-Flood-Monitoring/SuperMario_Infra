@@ -85,6 +85,7 @@ SuperMario_Infra/
 │   ├── deploy.sh
 │   ├── healthcheck.sh
 │   ├── init-letsencrypt.sh
+│   ├── login-ghcr.sh
 │   ├── render-nginx.sh
 │   ├── restore-db.sh
 │   ├── rollback.sh
@@ -115,7 +116,13 @@ SuperMario_Infra/
    SSH_PRIVATE_KEY
    DEPLOY_PATH
    PRODUCTION_ENV_YAML_B64
+   GHCR_USERNAME
+   GHCR_TOKEN
    ```
+
+   `GHCR_USERNAME`, `GHCR_TOKEN`은 GHCR package가 private일 때 필요합니다. 모든 GHCR image를 public으로 운영한다면 생략할 수 있습니다.
+
+   `GHCR_USERNAME`은 토큰을 발급한 GitHub 사용자 이름입니다. `GHCR_TOKEN`은 package read 권한이 있는 GitHub Personal Access Token입니다.
 
 4. 서비스 레포 Secrets 등록
 
@@ -167,6 +174,7 @@ SuperMario_Infra Actions
   -> PRODUCTION_ENV_YAML_B64 decode
   -> /home/seoktae/Documents/TEAM_SUPERMARIO/.env 업로드
   -> server-init.sh 실행
+  -> GHCR login
   -> Let's Encrypt 인증서 발급
   -> nginx + certbot 실행
 ```
@@ -180,6 +188,7 @@ SuperMario_Infra Actions
   -> SuperMario_Infra repository_dispatch 호출
   -> Deploy Production workflow 실행
   -> 서버 SSH 접속
+  -> GHCR login
   -> 새 image pull
   -> inactive color 컨테이너 실행
   -> health check 통과
