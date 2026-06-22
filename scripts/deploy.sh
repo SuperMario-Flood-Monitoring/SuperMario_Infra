@@ -93,6 +93,8 @@ set +a
 TARGET_SERVICE="${SERVICE}-${TARGET}"
 
 docker_compose -f docker-compose.prod.yml pull "$TARGET_SERVICE"
+docker_compose -f docker-compose.prod.yml stop "$TARGET_SERVICE" >/dev/null 2>&1 || true
+docker_compose -f docker-compose.prod.yml rm -f "$TARGET_SERVICE" >/dev/null 2>&1 || true
 docker_compose -f docker-compose.prod.yml up -d postgres redis "$TARGET_SERVICE"
 
 scripts/healthcheck.sh "$SERVICE" "$TARGET"
