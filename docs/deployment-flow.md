@@ -2,6 +2,20 @@
 
 ## Event Flow
 
+### First Setup
+
+```text
+SuperMario_Infra Actions -> Bootstrap Production
+  -> Sync infra files to server
+  -> Decode PRODUCTION_ENV_YAML_B64
+  -> Upload /home/seoktae/Documents/TEAM_SUPERMARIO/.env
+  -> Optionally run server-init.sh
+  -> Issue initial Let's Encrypt certificate
+  -> Start nginx + certbot renewal container
+```
+
+### Normal Deploy
+
 ```text
 Service repo prod push
   -> GitHub Actions build Docker image
@@ -32,6 +46,8 @@ The first certificate is issued by:
 ```bash
 scripts/init-letsencrypt.sh
 ```
+
+The recommended path is to run it through the `Bootstrap Production` workflow once. After that, normal deploys can keep using `Deploy Production`.
 
 After that, the `certbot` container renews certificates every 12 hours. nginx serves ACME challenges from a shared Docker volume.
 
