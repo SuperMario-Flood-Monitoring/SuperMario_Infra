@@ -1,0 +1,12 @@
+.env
+*.env
+!*.env.example
+runtime/*.env
+nginx/conf.d/app.conf
+nginx/conf.d/upstreams.conf
+backups/
+*.pem
+id_rsa*
+id_ed25519*
+.DS_Store
+

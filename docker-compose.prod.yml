@@ -1,0 +1,152 @@
+name: ${COMPOSE_PROJECT_NAME:-supermario}
+
+services:
+  nginx:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot_www:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - web
+
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
+    volumes:
+      - certbot_www:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
+    networks:
+      - web
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-supermario}
+      POSTGRES_USER: ${POSTGRES_USER:-supermario}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - web
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - web
+
+  frontend-blue:
+    image: ${FRONTEND_BLUE_IMAGE:-ghcr.io/supermario-flood-monitoring/supermario-react:prod}
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - web
+
+  frontend-green:
+    image: ${FRONTEND_GREEN_IMAGE:-ghcr.io/supermario-flood-monitoring/supermario-react:prod}
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - web
+
+  backend-blue:
+    image: ${BACKEND_BLUE_IMAGE:-ghcr.io/supermario-flood-monitoring/supermario-django:prod}
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_ENGINE: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+    volumes:
+      - backend_data:/data
+      - backend_static:/app/staticfiles
+      - backend_media:/app/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "8000"
+    networks:
+      - web
+
+  backend-green:
+    image: ${BACKEND_GREEN_IMAGE:-ghcr.io/supermario-flood-monitoring/supermario-django:prod}
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_ENGINE: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+    volumes:
+      - backend_data:/data
+      - backend_static:/app/staticfiles
+      - backend_media:/app/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "8000"
+    networks:
+      - web
+
+  llm-blue:
+    image: ${LLM_BLUE_IMAGE:-ghcr.io/supermario-flood-monitoring/supermario-llm:prod}
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    expose:
+      - "8000"
+    networks:
+      - web
+
+  llm-green:
+    image: ${LLM_GREEN_IMAGE:-ghcr.io/supermario-flood-monitoring/supermario-llm:prod}
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    expose:
+      - "8000"
+    networks:
+      - web
+
+networks:
+  web:
+    driver: bridge
+
+volumes:
+  certbot_www:
+  letsencrypt:
+  postgres_data:
+  redis_data:
+  backend_data:
+  backend_static:
+  backend_media:
+

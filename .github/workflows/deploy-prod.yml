@@ -1,0 +1,126 @@
+name: Deploy Production
+
+on:
+  repository_dispatch:
+    types:
+      - service-image-published
+  workflow_dispatch:
+    inputs:
+      service:
+        description: Service to deploy
+        required: true
+        type: choice
+        options:
+          - frontend
+          - backend
+          - llm
+      image:
+        description: Full image name without tag
+        required: true
+        type: string
+      tag:
+        description: Image tag
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SERVICE: ${{ github.event.client_payload.service || inputs.service }}
+      IMAGE: ${{ github.event.client_payload.image || inputs.image }}
+      TAG: ${{ github.event.client_payload.tag || inputs.tag }}
+      SERVER_HOST: ${{ secrets.SERVER_HOST }}
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+      SERVER_PORT: ${{ secrets.SERVER_PORT || '22' }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/home/seoktae/Documents/TEAM_SUPERMARIO' }}
+
+    steps:
+      - name: Checkout infra
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$SERVER_PORT" "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Sync infra files to server
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" "mkdir -p '$DEPLOY_PATH'"
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p $SERVER_PORT" \
+            --exclude '.git/' \
+            --exclude '.env' \
+            --exclude 'runtime/*.env' \
+            --exclude 'backups/' \
+            ./ "$SERVER_USER@$SERVER_HOST:$DEPLOY_PATH/"
+
+      - name: Render production env from YAML secret
+        env:
+          PRODUCTION_ENV_YAML_B64: ${{ secrets.PRODUCTION_ENV_YAML_B64 }}
+        run: |
+          if [ -z "$PRODUCTION_ENV_YAML_B64" ]; then
+            echo "Missing PRODUCTION_ENV_YAML_B64 secret." >&2
+            exit 1
+          fi
+
+          python3 -m pip install --quiet pyyaml
+          python3 - <<'PY'
+          import base64
+          import os
+          import re
+          from pathlib import Path
+
+          import yaml
+
+          raw = os.environ["PRODUCTION_ENV_YAML_B64"]
+          decoded = base64.b64decode(raw).decode("utf-8")
+          data = yaml.safe_load(decoded)
+
+          if not isinstance(data, dict):
+              raise SystemExit("PRODUCTION_ENV_YAML_B64 must decode to a YAML mapping.")
+
+          key_pattern = re.compile(r"^[A-Z][A-Z0-9_]*$")
+
+          def stringify(value):
+              if value is None:
+                  return ""
+              if isinstance(value, bool):
+                  return "true" if value else "false"
+              return str(value)
+
+          def shell_quote(value):
+              return "'" + value.replace("'", "'\"'\"'") + "'"
+
+          lines = []
+          for key, value in data.items():
+              key = str(key)
+              if not key_pattern.match(key):
+                  raise SystemExit(f"Invalid env key: {key}")
+              lines.append(f"{key}={shell_quote(stringify(value))}")
+
+          out = Path(os.environ["RUNNER_TEMP"]) / "production.env"
+          out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          print(f"Wrote {out}")
+          PY
+
+      - name: Upload production env to server
+        run: |
+          scp -i ~/.ssh/deploy_key -P "$SERVER_PORT" "$RUNNER_TEMP/production.env" \
+            "$SERVER_USER@$SERVER_HOST:$DEPLOY_PATH/.env"
+          ssh -i ~/.ssh/deploy_key -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
+            "chmod 600 '$DEPLOY_PATH/.env'"
+
+      - name: Deploy service
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$SERVER_PORT" "$SERVER_USER@$SERVER_HOST" \
+            "cd '$DEPLOY_PATH' && chmod +x scripts/*.sh && ./scripts/deploy.sh '$SERVICE' '$IMAGE' '$TAG'"

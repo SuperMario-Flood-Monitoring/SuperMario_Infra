@@ -1,0 +1,35 @@
+COMPOSE_PROJECT_NAME: supermario
+
+DOMAIN: supermario.o-r.kr
+LETSENCRYPT_EMAIL: seoktae.online@gmail.com
+LETSENCRYPT_STAGING: "false"
+NGINX_MODE: https
+
+FRONTEND_BLUE_IMAGE: ghcr.io/supermario-flood-monitoring/supermario-react:prod
+FRONTEND_GREEN_IMAGE: ghcr.io/supermario-flood-monitoring/supermario-react:prod
+BACKEND_BLUE_IMAGE: ghcr.io/supermario-flood-monitoring/supermario-django:prod
+BACKEND_GREEN_IMAGE: ghcr.io/supermario-flood-monitoring/supermario-django:prod
+LLM_BLUE_IMAGE: ghcr.io/supermario-flood-monitoring/supermario-llm:prod
+LLM_GREEN_IMAGE: ghcr.io/supermario-flood-monitoring/supermario-llm:prod
+
+DATABASE_ENGINE: postgres
+POSTGRES_DB: supermario
+POSTGRES_USER: supermario
+POSTGRES_PASSWORD: supermario4
+POSTGRES_HOST: postgres
+POSTGRES_PORT: "5432"
+
+DJANGO_SECRET_KEY: supermario4
+DJANGO_DEBUG: "false"
+DJANGO_ALLOWED_HOSTS: supermario.o-r.kr,59.9.136.144,192.168.0.101,localhost,127.0.0.1
+CORS_ALLOWED_ORIGINS: https://supermario.o-r.kr,http://supermario.o-r.kr,http://59.9.136.144,http://192.168.0.101
+
+REDIS_URL: redis://redis:6379/0
+
+OPENAI_API_KEY: "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"
+TELEGRAM_BOT_TOKEN: "8941132099:AAGsOMHqLg50UTfy1DhgnlFDyqpmz1t4WZw"
+TELEGRAM_CHAT_ID: "7680428668"
+
+STOP_OLD_AFTER_DEPLOY: "false"
+MAX_HEALTH_RETRIES: "30"
+HEALTH_RETRY_SECONDS: "2"
