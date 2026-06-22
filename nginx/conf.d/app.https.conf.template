@@ -59,7 +59,6 @@ server {
     }
 
     location /llm/ {
-        rewrite ^/llm/?(.*)$ /$1 break;
         proxy_pass $llm_url;
     }
 

@@ -29,10 +29,10 @@ case "$SERVICE" in
     CHECK_CMD='wget -qO- http://127.0.0.1/ >/dev/null'
     ;;
   backend)
-    CHECK_CMD='python -c "import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/engine/health\", timeout=5).read()"'
+    CHECK_CMD='python -c "import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/api/engine/health\", timeout=5).read()"'
     ;;
   llm)
-    CHECK_CMD='python -c "import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/health\", timeout=5).read()"'
+    CHECK_CMD='python -c "import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/llm/health\", timeout=5).read()"'
     ;;
   *)
     echo "Unsupported service: $SERVICE" >&2
