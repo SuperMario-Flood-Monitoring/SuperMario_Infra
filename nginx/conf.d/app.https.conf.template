@@ -42,27 +42,19 @@ server {
     set $backend_url http://backend-__BACKEND_ACTIVE__:8000;
     set $llm_url http://llm-__LLM_ACTIVE__:8000;
 
-    location /api/ {
-        proxy_pass $backend_url;
-    }
-
     location /admin/ {
         proxy_pass $backend_url;
     }
 
-    location /engine/ {
-        proxy_pass $backend_url;
-    }
-
-    location /editor/ {
-        proxy_pass $backend_url;
-    }
-
-    location /ws/ {
+    location /api/ws/ {
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
         proxy_read_timeout 3600s;
+        proxy_pass $backend_url;
+    }
+
+    location /api/ {
         proxy_pass $backend_url;
     }
 
