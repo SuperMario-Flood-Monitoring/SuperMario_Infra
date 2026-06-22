@@ -20,7 +20,7 @@ if [ -z "${DOMAIN:-}" ] || [ -z "${LETSENCRYPT_EMAIL:-}" ]; then
 fi
 
 scripts/render-nginx.sh http
-docker_compose -f docker-compose.prod.yml up -d nginx
+docker_compose -f docker-compose.prod.yml up -d --force-recreate nginx
 
 STAGING_ARGS=()
 if [ "${LETSENCRYPT_STAGING:-false}" = "true" ]; then
@@ -38,7 +38,7 @@ docker_compose -f docker-compose.prod.yml run --rm --entrypoint certbot certbot 
   "${STAGING_ARGS[@]}"
 
 scripts/render-nginx.sh https
-docker_compose -f docker-compose.prod.yml up -d nginx certbot
+docker_compose -f docker-compose.prod.yml up -d --force-recreate nginx certbot
 docker_compose -f docker-compose.prod.yml exec -T nginx nginx -s reload || docker_compose -f docker-compose.prod.yml restart nginx
 
 echo "Let's Encrypt certificate initialized for ${DOMAIN}"

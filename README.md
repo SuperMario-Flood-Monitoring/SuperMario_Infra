@@ -83,6 +83,7 @@ SuperMario_Infra/
 │   │   └── docker-compose.sh
 │   ├── backup-db.sh
 │   ├── deploy.sh
+│   ├── has-letsencrypt-cert.sh
 │   ├── healthcheck.sh
 │   ├── init-letsencrypt.sh
 │   ├── login-ghcr.sh
