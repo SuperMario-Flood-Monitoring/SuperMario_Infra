@@ -5,6 +5,7 @@ SERVICE="${1:?usage: scripts/rollback.sh <frontend|backend|llm>}"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+. scripts/lib/docker-compose.sh
 
 if [ -f .env ]; then
   set -a
@@ -63,8 +64,7 @@ scripts/healthcheck.sh "$SERVICE" "$TARGET"
 upsert_env runtime/active-colors.env "$ACTIVE_KEY" "$TARGET"
 scripts/render-nginx.sh "${NGINX_MODE:-https}"
 
-docker compose -f docker-compose.prod.yml up -d nginx
-docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload || docker compose -f docker-compose.prod.yml restart nginx
+docker_compose -f docker-compose.prod.yml up -d nginx
+docker_compose -f docker-compose.prod.yml exec -T nginx nginx -s reload || docker_compose -f docker-compose.prod.yml restart nginx
 
 echo "Rollback complete: ${SERVICE} is active on ${TARGET}"
-

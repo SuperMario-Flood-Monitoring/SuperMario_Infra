@@ -79,6 +79,8 @@ SuperMario_Infra/
 ├── runtime/
 │   └── .gitkeep
 ├── scripts/
+│   ├── lib/
+│   │   └── docker-compose.sh
 │   ├── backup-db.sh
 │   ├── deploy.sh
 │   ├── healthcheck.sh

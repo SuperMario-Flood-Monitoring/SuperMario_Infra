@@ -7,6 +7,7 @@ TAG="${3:?usage: scripts/deploy.sh <frontend|backend|llm> <image> <tag>}"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+. scripts/lib/docker-compose.sh
 
 if [ ! -f .env ]; then
   echo "Missing .env. Copy .env.example to .env and fill production values first." >&2
@@ -89,25 +90,23 @@ set -a
 . runtime/image-tags.env
 set +a
 
-COMPOSE=(docker compose -f docker-compose.prod.yml)
 TARGET_SERVICE="${SERVICE}-${TARGET}"
 
-"${COMPOSE[@]}" pull "$TARGET_SERVICE"
-"${COMPOSE[@]}" up -d postgres redis "$TARGET_SERVICE"
+docker_compose -f docker-compose.prod.yml pull "$TARGET_SERVICE"
+docker_compose -f docker-compose.prod.yml up -d postgres redis "$TARGET_SERVICE"
 
 scripts/healthcheck.sh "$SERVICE" "$TARGET"
 
 upsert_env runtime/active-colors.env "$ACTIVE_KEY" "$TARGET"
 scripts/render-nginx.sh "${NGINX_MODE:-https}"
 
-"${COMPOSE[@]}" up -d nginx certbot
-if ! "${COMPOSE[@]}" exec -T nginx nginx -s reload; then
-  "${COMPOSE[@]}" restart nginx
+docker_compose -f docker-compose.prod.yml up -d nginx certbot
+if ! docker_compose -f docker-compose.prod.yml exec -T nginx nginx -s reload; then
+  docker_compose -f docker-compose.prod.yml restart nginx
 fi
 
 if [ "${STOP_OLD_AFTER_DEPLOY:-false}" = "true" ]; then
-  "${COMPOSE[@]}" stop "${SERVICE}-${ACTIVE}" || true
+  docker_compose -f docker-compose.prod.yml stop "${SERVICE}-${ACTIVE}" || true
 fi
 
 echo "Deployment complete: ${SERVICE} is active on ${TARGET}"
-

@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+. scripts/lib/docker-compose.sh
 
 if [ ! -f .env ]; then
   echo "Missing .env. Copy .env.example to .env and fill DOMAIN and LETSENCRYPT_EMAIL first." >&2
@@ -19,14 +20,14 @@ if [ -z "${DOMAIN:-}" ] || [ -z "${LETSENCRYPT_EMAIL:-}" ]; then
 fi
 
 scripts/render-nginx.sh http
-docker compose -f docker-compose.prod.yml up -d nginx
+docker_compose -f docker-compose.prod.yml up -d nginx
 
 STAGING_ARGS=()
 if [ "${LETSENCRYPT_STAGING:-false}" = "true" ]; then
   STAGING_ARGS=(--staging)
 fi
 
-docker compose -f docker-compose.prod.yml run --rm --entrypoint certbot certbot \
+docker_compose -f docker-compose.prod.yml run --rm --entrypoint certbot certbot \
   certonly \
   --webroot \
   --webroot-path /var/www/certbot \
@@ -37,8 +38,7 @@ docker compose -f docker-compose.prod.yml run --rm --entrypoint certbot certbot 
   "${STAGING_ARGS[@]}"
 
 scripts/render-nginx.sh https
-docker compose -f docker-compose.prod.yml up -d nginx certbot
-docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload || docker compose -f docker-compose.prod.yml restart nginx
+docker_compose -f docker-compose.prod.yml up -d nginx certbot
+docker_compose -f docker-compose.prod.yml exec -T nginx nginx -s reload || docker_compose -f docker-compose.prod.yml restart nginx
 
 echo "Let's Encrypt certificate initialized for ${DOMAIN}"
-
