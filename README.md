@@ -63,6 +63,40 @@ DB, Redis, Django, LLM 서버는 Docker Compose 내부 네트워크에서만 통
 | `SuperMario_LLM_Server` | FastAPI + LangChain 코드 관리, Docker image build, GHCR push |
 | `SuperMario_Infra` | 운영 서버 배포, compose, nginx, HTTPS, DB volume, backup, rollback 관리 |
 
+## 로컬 Docker 실행
+
+로컬 개발용 전체 스택은 이 Infra 레포의 `local-dev/docker-compose.local.yml`과 실행 파일을 사용합니다.
+
+전제 폴더 구조:
+
+```text
+Team_SuperMario/
+├── SuperMario_Django/
+├── SuperMario_Infra/
+├── SuperMario_LLM/
+└── SuperMario_React/
+```
+
+Mac:
+
+```sh
+./local-dev/mac/start-supermario-docker-mac.sh localhost up
+./local-dev/mac/start-supermario-docker-mac.sh ip up
+```
+
+Finder에서 실행할 때는 `local-dev/mac/start-supermario-docker-mac.command` 또는 `local-dev/mac/start-supermario-docker.command`를 열면 localhost/IP 선택 메뉴가 표시됩니다.
+
+Windows:
+
+```powershell
+.\local-dev\window\start-supermario-docker-windows.ps1 up localhost
+.\local-dev\window\start-supermario-docker-windows.ps1 up ip
+```
+
+탐색기에서 실행할 때는 `local-dev\window\start-supermario-docker-windows.bat`을 열면 localhost/IP 선택 메뉴가 표시됩니다.
+
+로컬 compose는 운영용 `.env`를 읽지 않도록 `local-dev/local-dev.compose.env`를 자동 생성해 사용합니다. 이 파일은 개인 로컬 override용이며 Git에 올리지 않습니다.
+
 ## 폴더 구조
 
 ```text
@@ -90,6 +124,15 @@ SuperMario_Infra/
 │   ├── rollback.sh
 │   └── server-init.sh
 ├── docker-compose.prod.yml
+├── local-dev/
+│   ├── docker-compose.local.yml
+│   ├── mac/
+│   │   ├── start-supermario-docker.command
+│   │   ├── start-supermario-docker-mac.command
+│   │   └── start-supermario-docker-mac.sh
+│   └── window/
+│       ├── start-supermario-docker-windows.bat
+│       └── start-supermario-docker-windows.ps1
 ├── .env.example
 └── README.md
 ```
