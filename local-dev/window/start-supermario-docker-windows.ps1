@@ -45,10 +45,10 @@ Local URLs:
 "@
 }
 
-function Write-DockerHubAuthHelp {
+function Write-ComposeStartFailureHelp {
   @"
 
-Docker Hub image pull failed.
+Docker Compose start failed. Check the Docker error above first.
 
 If the error says "failed to fetch oauth token" or "401 Unauthorized",
 refresh Docker Desktop's Docker Hub credentials:
@@ -60,7 +60,7 @@ Then rerun:
 
   .\window\start-supermario-docker-windows.ps1 up
 
-"@ | Write-Error
+"@ | Write-Host
 }
 
 function Get-LanIp {
@@ -110,7 +110,7 @@ function Invoke-ComposeStart {
   }
 
   if ($LASTEXITCODE -ne 0) {
-    Write-DockerHubAuthHelp
+    Write-ComposeStartFailureHelp
     exit $LASTEXITCODE
   }
 }
@@ -130,6 +130,21 @@ $requiredDirs = @(
 foreach ($item in $requiredDirs) {
   if (!(Test-Path $item.Path)) {
     Write-Error "Missing $($item.Label) directory: $($item.Path)"
+  }
+}
+
+$requiredFiles = @(
+  @{ Path = Join-Path $ProjectRoot "SuperMario_Django\backend\manage.py"; Label = "Django manage.py" },
+  @{ Path = Join-Path $ProjectRoot "SuperMario_Django\backend\requirements.txt"; Label = "Django requirements.txt" },
+  @{ Path = Join-Path $ProjectRoot "SuperMario_React\package.json"; Label = "React package.json" },
+  @{ Path = Join-Path $ProjectRoot "SuperMario_React\package-lock.json"; Label = "React package-lock.json" },
+  @{ Path = Join-Path $ProjectRoot "SuperMario_LLM\main.py"; Label = "LLM main.py" },
+  @{ Path = Join-Path $ProjectRoot "SuperMario_LLM\requirements.txt"; Label = "LLM requirements.txt" }
+)
+
+foreach ($item in $requiredFiles) {
+  if (!(Test-Path $item.Path)) {
+    Write-Error "Missing $($item.Label): $($item.Path). Pull the latest matching repo or check the TEAM_MARIO folder layout."
   }
 }
 

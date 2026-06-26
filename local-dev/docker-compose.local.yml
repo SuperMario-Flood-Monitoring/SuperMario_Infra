@@ -21,7 +21,22 @@ services:
   backend:
     build:
       context: ../../SuperMario_Django/backend
-      dockerfile: Dockerfile
+      dockerfile_inline: |
+        ARG PYTHON_BASE_IMAGE=python:3.12-slim
+        FROM $${PYTHON_BASE_IMAGE}
+
+        ENV PYTHONDONTWRITEBYTECODE=1 \
+            PYTHONUNBUFFERED=1 \
+            DATABASE_ENGINE=sqlite \
+            SQLITE_PATH=/data/db.sqlite3
+
+        WORKDIR /app
+
+        COPY requirements.txt .
+        RUN pip install --no-cache-dir -r requirements.txt
+        RUN mkdir -p /data
+
+        EXPOSE 8000
       args:
         PYTHON_BASE_IMAGE: "${BACKEND_PYTHON_BASE_IMAGE:-public.ecr.aws/docker/library/python:3.12-slim}"
     restart: unless-stopped
@@ -61,7 +76,19 @@ services:
   llm:
     build:
       context: ../../SuperMario_LLM
-      dockerfile: Dockerfile
+      dockerfile_inline: |
+        ARG PYTHON_BASE_IMAGE=python:3.11-slim
+        FROM $${PYTHON_BASE_IMAGE}
+
+        WORKDIR /app
+
+        ENV PYTHONDONTWRITEBYTECODE=1 \
+            PYTHONUNBUFFERED=1
+
+        COPY requirements.txt .
+        RUN pip install --no-cache-dir -r requirements.txt
+
+        EXPOSE 8000
       args:
         PYTHON_BASE_IMAGE: "${LLM_PYTHON_BASE_IMAGE:-public.ecr.aws/docker/library/python:3.11-slim}"
     restart: unless-stopped
@@ -80,7 +107,16 @@ services:
   frontend:
     build:
       context: ../../SuperMario_React
-      dockerfile: Dockerfile.dev
+      dockerfile_inline: |
+        ARG NODE_VERSION=24
+        ARG NODE_BASE_IMAGE=node:$${NODE_VERSION}-alpine
+        FROM $${NODE_BASE_IMAGE}
+
+        WORKDIR /app
+
+        ENV npm_config_update_notifier=false
+
+        EXPOSE 5173
       args:
         NODE_VERSION: "${FRONTEND_NODE_VERSION:-24}"
         NODE_BASE_IMAGE: "${FRONTEND_NODE_BASE_IMAGE:-public.ecr.aws/docker/library/node:24-alpine}"

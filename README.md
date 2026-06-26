@@ -84,7 +84,7 @@ Mac:
 ./local-dev/mac/start-supermario-docker-mac.sh ip up
 ```
 
-Finder에서 실행할 때는 `local-dev/mac/start-supermario-docker-mac.command` 또는 `local-dev/mac/start-supermario-docker.command`를 열면 localhost/IP 선택 메뉴가 표시됩니다.
+Finder에서 실행할 때는 `local-dev/mac/start-supermario-docker-mac.command`를 열면 localhost/IP 선택 메뉴가 표시됩니다.
 
 Windows:
 
@@ -127,7 +127,6 @@ SuperMario_Infra/
 ├── local-dev/
 │   ├── docker-compose.local.yml
 │   ├── mac/
-│   │   ├── start-supermario-docker.command
 │   │   ├── start-supermario-docker-mac.command
 │   │   └── start-supermario-docker-mac.sh
 │   └── window/

@@ -45,10 +45,10 @@ die() {
   exit 1
 }
 
-print_dockerhub_auth_help() {
+print_compose_start_failure_help() {
   cat >&2 <<'EOF'
 
-Docker Hub image pull failed.
+Docker Compose start failed. Check the Docker error above first.
 
 If the error says "failed to fetch oauth token" or "401 Unauthorized",
 refresh Docker Desktop's Docker Hub credentials:
@@ -98,12 +98,26 @@ require_dir() {
   [ -d "$path" ] || die "Missing $label directory: $path"
 }
 
+require_file() {
+  local path label
+  path=$1
+  label=$2
+
+  [ -f "$path" ] || die "Missing $label: $path. Pull the latest matching repo or check the Team_SuperMario folder layout."
+}
+
 cd "$LOCAL_DEV_DIR"
 
 [ -f "$COMPOSE_FILE" ] || die "Missing compose file: $COMPOSE_FILE"
 require_dir "$PROJECT_ROOT/SuperMario_Django/backend" "Django backend"
 require_dir "$PROJECT_ROOT/SuperMario_React" "React frontend"
 require_dir "$PROJECT_ROOT/SuperMario_LLM" "LLM server"
+require_file "$PROJECT_ROOT/SuperMario_Django/backend/manage.py" "Django manage.py"
+require_file "$PROJECT_ROOT/SuperMario_Django/backend/requirements.txt" "Django requirements.txt"
+require_file "$PROJECT_ROOT/SuperMario_React/package.json" "React package.json"
+require_file "$PROJECT_ROOT/SuperMario_React/package-lock.json" "React package-lock.json"
+require_file "$PROJECT_ROOT/SuperMario_LLM/main.py" "LLM main.py"
+require_file "$PROJECT_ROOT/SuperMario_LLM/requirements.txt" "LLM requirements.txt"
 
 if [ ! -f "$LOCAL_COMPOSE_ENV_FILE" ]; then
   : > "$LOCAL_COMPOSE_ENV_FILE"
@@ -171,7 +185,7 @@ LLM_HEALTH_URL="http://${LOCAL_DEV_HOST_IP}:8001/llm/health"
 case "$COMMAND" in
   up|start)
     if ! $COMPOSE --env-file "$LOCAL_COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" up --build -d; then
-      print_dockerhub_auth_help
+      print_compose_start_failure_help
       exit 1
     fi
     $COMPOSE --env-file "$LOCAL_COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" ps
@@ -193,7 +207,7 @@ EOF
     ;;
   foreground)
     if ! $COMPOSE --env-file "$LOCAL_COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" up --build; then
-      print_dockerhub_auth_help
+      print_compose_start_failure_help
       exit 1
     fi
     ;;
@@ -211,7 +225,7 @@ EOF
     ;;
   rebuild)
     if ! $COMPOSE --env-file "$LOCAL_COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" up --build --force-recreate -d; then
-      print_dockerhub_auth_help
+      print_compose_start_failure_help
       exit 1
     fi
     $COMPOSE --env-file "$LOCAL_COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" ps
