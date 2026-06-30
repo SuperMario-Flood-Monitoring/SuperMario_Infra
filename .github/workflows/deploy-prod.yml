@@ -63,6 +63,7 @@ jobs:
             --exclude '.git/' \
             --exclude '.env' \
             --exclude 'runtime/*.env' \
+            --exclude 'runtime/chroma_data/' \
             --exclude 'backups/' \
             ./ "$SERVER_USER@$SERVER_HOST:$DEPLOY_PATH/"
 
