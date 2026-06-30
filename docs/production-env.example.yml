@@ -28,8 +28,9 @@ SUPERMARIO_REFRESH_COOKIE_SAMESITE: Lax
 SUPERMARIO_REFRESH_COOKIE_SECURE: "true"
 SUPERMARIO_PUBLIC_BASE_URL: https://supermario.o-r.kr
 SUPERMARIO_API_BASE_URL: https://supermario.o-r.kr/api
-SUPERMARIO_LLM_BASE_URL: https://supermario.o-r.kr/llm
-SUPERMARIO_LLM_ANALYZE_URL: https://supermario.o-r.kr/llm/analyze
+SUPERMARIO_LLM_BASE_URL: http://nginx:8080/llm
+SUPERMARIO_LLM_ANALYZE_URL: http://nginx:8080/llm/analyze
+SUPERMARIO_LLM_MAINTENANCE_LOG_URL: http://nginx:8080/llm/maintenance/log/
 
 REDIS_URL: redis://redis:6379/0
 

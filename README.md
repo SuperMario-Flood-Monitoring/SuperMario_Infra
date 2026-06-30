@@ -242,6 +242,27 @@ LLM_ACTIVE=blue
 
 이 구조에서는 frontend, backend, llm을 서로 독립적으로 배포할 수 있습니다.
 
+Backend가 LLM을 호출할 때는 `llm-blue` 또는 `llm-green`을 직접 바라보지 않습니다. 두 이름 중 하나를 `.env`에 고정하면 LLM active color가 바뀔 때 backend가 old color를 계속 호출할 수 있기 때문입니다.
+
+운영에서는 Docker 내부 전용 nginx listener를 통해 active LLM으로 라우팅합니다.
+
+```text
+backend-blue/green
+  -> http://nginx:8080/llm/analyze
+  -> nginx 내부 listener
+  -> llm-${LLM_ACTIVE}:8000
+```
+
+따라서 production 환경변수는 아래처럼 유지합니다.
+
+```text
+SUPERMARIO_LLM_BASE_URL=http://nginx:8080/llm
+SUPERMARIO_LLM_ANALYZE_URL=http://nginx:8080/llm/analyze
+SUPERMARIO_LLM_MAINTENANCE_LOG_URL=http://nginx:8080/llm/maintenance/log/
+```
+
+`nginx:8080`은 Docker 내부 네트워크에서만 사용하는 주소이며, 외부에는 `80/443`만 공개합니다.
+
 ## HTTPS
 
 최초 인증서는 `Bootstrap Production` workflow에서 발급합니다.

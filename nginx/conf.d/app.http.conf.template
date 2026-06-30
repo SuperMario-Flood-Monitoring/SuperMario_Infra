@@ -12,3 +12,21 @@ server {
     }
 }
 
+server {
+    listen 8080;
+    server_name _;
+
+    resolver 127.0.0.11 valid=30s ipv6=off;
+
+    client_max_body_size 50m;
+
+    set $llm_url http://llm-__LLM_ACTIVE__:8000;
+
+    location /llm/ {
+        proxy_pass $llm_url;
+    }
+
+    location / {
+        return 404;
+    }
+}
