@@ -1,12 +1,12 @@
-version: "2.4"
+version: '2.4'
 
 services:
   nginx:
     image: nginx:stable-alpine
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - certbot_www:/var/www/certbot
@@ -34,7 +34,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -44,11 +44,11 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    command: ['redis-server', '--appendonly', 'yes']
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -59,7 +59,7 @@ services:
     image: ${FRONTEND_BLUE_IMAGE:-ghcr.io/supermario-flood-monitoring/supermario-react:prod}
     restart: unless-stopped
     expose:
-      - "80"
+      - '80'
     networks:
       - web
 
@@ -67,7 +67,7 @@ services:
     image: ${FRONTEND_GREEN_IMAGE:-ghcr.io/supermario-flood-monitoring/supermario-react:prod}
     restart: unless-stopped
     expose:
-      - "80"
+      - '80'
     networks:
       - web
 
@@ -90,7 +90,7 @@ services:
       redis:
         condition: service_healthy
     expose:
-      - "8000"
+      - '8000'
     networks:
       - web
 
@@ -113,7 +113,7 @@ services:
       redis:
         condition: service_healthy
     expose:
-      - "8000"
+      - '8000'
     networks:
       - web
 
@@ -122,8 +122,10 @@ services:
     restart: unless-stopped
     env_file:
       - ./.env
+    volumes:
+      - ./runtime/chroma_data:/app/chroma_data
     expose:
-      - "8000"
+      - '8000'
     networks:
       - web
 
@@ -132,8 +134,10 @@ services:
     restart: unless-stopped
     env_file:
       - ./.env
+    volumes:
+      - ./runtime/chroma_data:/app/chroma_data
     expose:
-      - "8000"
+      - '8000'
     networks:
       - web
 
