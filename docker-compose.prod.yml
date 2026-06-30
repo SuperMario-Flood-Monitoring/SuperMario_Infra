@@ -7,8 +7,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    expose:
-      - "8080"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - certbot_www:/var/www/certbot

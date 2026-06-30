@@ -101,7 +101,8 @@ scripts/healthcheck.sh "$SERVICE" "$TARGET"
 upsert_env runtime/active-colors.env "$ACTIVE_KEY" "$TARGET"
 scripts/render-nginx.sh "${NGINX_MODE:-https}"
 
-docker_compose -f docker-compose.prod.yml up -d nginx certbot
+docker_compose -f docker-compose.prod.yml up -d --no-recreate nginx certbot
+docker_compose -f docker-compose.prod.yml exec -T nginx nginx -t
 if ! docker_compose -f docker-compose.prod.yml exec -T nginx nginx -s reload; then
   docker_compose -f docker-compose.prod.yml restart nginx
 fi
