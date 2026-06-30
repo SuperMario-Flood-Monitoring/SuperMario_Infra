@@ -16,8 +16,8 @@ $InfraDir = Resolve-Path (Join-Path $LocalDevDir "..")
 $ProjectRoot = Resolve-Path (Join-Path $InfraDir "..")
 $ComposeFile = Join-Path $LocalDevDir "docker-compose.local.yml"
 $LocalComposeEnvFile = Join-Path $LocalDevDir "local-dev.compose.env"
-$LlmEnvFile = Join-Path $ProjectRoot "SuperMario_LLM\.env"
-$LlmEnvExample = Join-Path $ProjectRoot "SuperMario_LLM\.env.example"
+$InfraEnvFile = Join-Path $InfraDir ".env"
+$InfraEnvExample = Join-Path $InfraDir ".env.example"
 
 function Write-Usage {
   @"
@@ -170,20 +170,23 @@ if ($LASTEXITCODE -eq 0) {
   Write-Error "Docker Compose is not available. Install or update Docker Desktop."
 }
 
-if (!(Test-Path $LlmEnvFile)) {
-  if (Test-Path $LlmEnvExample) {
-    Copy-Item $LlmEnvExample $LlmEnvFile
-    Write-Host "Created $LlmEnvFile from .env.example. Fill API keys if LLM calls need them."
+if (!(Test-Path $InfraEnvFile)) {
+  if (Test-Path $InfraEnvExample) {
+    Copy-Item $InfraEnvExample $InfraEnvFile
+    Write-Host "Created $InfraEnvFile from .env.example. Fill OPENAI_API_KEY and Telegram values if LLM calls need them."
   } else {
-    @"
-APP_ENV=local
-LLM_API_PREFIX=/llm
+@"
+COMPOSE_PROJECT_NAME=supermario
 OPENAI_API_KEY=
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
-"@ | Set-Content -Encoding UTF8 $LlmEnvFile
-    Write-Host "Created default $LlmEnvFile. Fill API keys if LLM calls need them."
+"@ | Set-Content -Encoding UTF8 $InfraEnvFile
+    Write-Host "Created default $InfraEnvFile. Fill OPENAI_API_KEY and Telegram values if LLM calls need them."
   }
+}
+
+if (Select-String -Path $InfraEnvFile -Pattern '^[A-Z][A-Z0-9_]*\s*:' -Quiet) {
+  Write-Error "$InfraEnvFile looks like YAML. Convert it to KEY=VALUE .env format before starting local Docker."
 }
 
 switch ($HostMode) {

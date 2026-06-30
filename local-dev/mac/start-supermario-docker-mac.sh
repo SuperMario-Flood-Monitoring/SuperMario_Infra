@@ -7,8 +7,8 @@ INFRA_DIR=$(CDPATH= cd -- "$LOCAL_DEV_DIR/.." && pwd)
 PROJECT_ROOT=$(CDPATH= cd -- "$INFRA_DIR/.." && pwd)
 COMPOSE_FILE="$LOCAL_DEV_DIR/docker-compose.local.yml"
 LOCAL_COMPOSE_ENV_FILE="$LOCAL_DEV_DIR/local-dev.compose.env"
-LLM_ENV_FILE="$PROJECT_ROOT/SuperMario_LLM/.env"
-LLM_ENV_EXAMPLE="$PROJECT_ROOT/SuperMario_LLM/.env.example"
+INFRA_ENV_FILE="$INFRA_DIR/.env"
+INFRA_ENV_EXAMPLE="$INFRA_DIR/.env.example"
 
 print_usage() {
   cat <<'EOF'
@@ -139,20 +139,23 @@ else
   die "Docker Compose is not available. Install or update Docker Desktop."
 fi
 
-if [ ! -f "$LLM_ENV_FILE" ]; then
-  if [ -f "$LLM_ENV_EXAMPLE" ]; then
-    cp "$LLM_ENV_EXAMPLE" "$LLM_ENV_FILE"
-    printf 'Created %s from .env.example. Fill API keys if LLM calls need them.\n' "$LLM_ENV_FILE"
+if [ ! -f "$INFRA_ENV_FILE" ]; then
+  if [ -f "$INFRA_ENV_EXAMPLE" ]; then
+    cp "$INFRA_ENV_EXAMPLE" "$INFRA_ENV_FILE"
+    printf 'Created %s from .env.example. Fill OPENAI_API_KEY and Telegram values if LLM calls need them.\n' "$INFRA_ENV_FILE"
   else
-    cat > "$LLM_ENV_FILE" <<'EOF'
-APP_ENV=local
-LLM_API_PREFIX=/llm
+    cat > "$INFRA_ENV_FILE" <<'EOF'
+COMPOSE_PROJECT_NAME=supermario
 OPENAI_API_KEY=
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
 EOF
-    printf 'Created default %s. Fill API keys if LLM calls need them.\n' "$LLM_ENV_FILE"
+    printf 'Created default %s. Fill OPENAI_API_KEY and Telegram values if LLM calls need them.\n' "$INFRA_ENV_FILE"
   fi
+fi
+
+if grep -Eq '^[A-Z][A-Z0-9_]*[[:space:]]*:' "$INFRA_ENV_FILE"; then
+  die "$INFRA_ENV_FILE looks like YAML. Convert it to KEY=VALUE .env format before starting local Docker."
 fi
 
 HOST_MODE=${SUPERMARIO_HOST_MODE:-localhost}
