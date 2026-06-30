@@ -1,6 +1,8 @@
 .env
 *.env
 !*.env.example
+production-env.yml
+docs/production-env.yml
 runtime/*.env
 nginx/conf.d/app.conf
 nginx/conf.d/upstreams.conf
@@ -9,4 +11,3 @@ backups/
 id_rsa*
 id_ed25519*
 .DS_Store
-
