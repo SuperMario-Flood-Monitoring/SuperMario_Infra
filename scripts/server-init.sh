@@ -10,10 +10,14 @@ if ! command -v docker >/dev/null 2>&1; then
   curl -fsSL https://get.docker.com | sudo sh
 fi
 
-if ! docker compose version >/dev/null 2>&1 && ! command -v docker-compose >/dev/null 2>&1; then
+if ! docker compose version >/dev/null 2>&1; then
   sudo apt-get install -y docker-compose-plugin \
     || sudo apt-get install -y docker-compose-v2 \
-    || sudo apt-get install -y docker-compose
+    || true
+fi
+
+if ! docker compose version >/dev/null 2>&1 && ! command -v docker-compose >/dev/null 2>&1; then
+  sudo apt-get install -y docker-compose
 fi
 
 sudo usermod -aG docker "$USER"

@@ -4,6 +4,10 @@
 
 React, Django, LLM 서버는 각각의 서비스 레포에서 Docker image를 만들고 GHCR에 push합니다. 이 레포는 그 image들을 운영 서버에서 조합해 실행하고, nginx reverse proxy, HTTPS, PostgreSQL, Redis, Blue/Green 배포, 백업/복구 스크립트를 관리합니다.
 
+## 데모
+
+- 운영 데모: [https://supermario.o-r.kr/demo/admin](https://supermario.o-r.kr/demo/admin)
+
 ## 한눈에 보기
 
 ```mermaid
@@ -63,6 +67,40 @@ DB, Redis, Django, LLM 서버는 Docker Compose 내부 네트워크에서만 통
 | `SuperMario_LLM_Server` | FastAPI + LangChain 코드 관리, Docker image build, GHCR push |
 | `SuperMario_Infra` | 운영 서버 배포, compose, nginx, HTTPS, DB volume, backup, rollback 관리 |
 
+## 로컬 Docker 실행
+
+로컬 개발용 전체 스택은 이 Infra 레포의 `local-dev/docker-compose.local.yml`과 실행 파일을 사용합니다.
+
+전제 폴더 구조:
+
+```text
+Team_SuperMario/
+├── SuperMario_Django/
+├── SuperMario_Infra/
+├── SuperMario_LLM/
+└── SuperMario_React/
+```
+
+Mac:
+
+```sh
+./local-dev/mac/start-supermario-docker-mac.sh localhost up
+./local-dev/mac/start-supermario-docker-mac.sh ip up
+```
+
+Finder에서 실행할 때는 `local-dev/mac/start-supermario-docker-mac.command`를 열면 localhost/IP 선택 메뉴가 표시됩니다.
+
+Windows:
+
+```powershell
+.\local-dev\window\start-supermario-docker-windows.ps1 up localhost
+.\local-dev\window\start-supermario-docker-windows.ps1 up ip
+```
+
+탐색기에서 실행할 때는 `local-dev\window\start-supermario-docker-windows.bat`을 열면 localhost/IP 선택 메뉴가 표시됩니다.
+
+로컬 compose는 `local-dev/local-dev.compose.env`를 compose 실행용 override로 사용하고, backend/LLM 컨테이너에는 Infra 루트의 `.env`를 `env_file`로 주입합니다. 따라서 로컬 LLM 호출에 필요한 `OPENAI_API_KEY`, `TELEGRAM_BOT_TOKEN`도 `SuperMario_Infra/.env`에 채웁니다. 실제 서비스의 Telegram 수신자 chat ID는 React/관리 API가 저장한 Django DB의 `NotificationRecipient` 목록을 사용합니다. `TELEGRAM_CHAT_ID`는 LLM 서버를 직접 호출하는 단독 테스트 fallback 용도일 때만 선택적으로 사용합니다. 두 파일 모두 개인 로컬 값이며 Git에 올리지 않습니다.
+
 ## 폴더 구조
 
 ```text
@@ -92,6 +130,14 @@ SuperMario_Infra/
 │   ├── rollback.sh
 │   └── server-init.sh
 ├── docker-compose.prod.yml
+├── local-dev/
+│   ├── docker-compose.local.yml
+│   ├── mac/
+│   │   ├── start-supermario-docker-mac.command
+│   │   └── start-supermario-docker-mac.sh
+│   └── window/
+│       ├── start-supermario-docker-windows.bat
+│       └── start-supermario-docker-windows.ps1
 ├── .env.example
 └── README.md
 ```
@@ -209,6 +255,27 @@ LLM_ACTIVE=blue
 예를 들어 현재 backend가 `blue`이면 다음 backend 배포는 `green` 컨테이너에 새 image를 띄웁니다. health check가 성공하면 nginx upstream만 `green`으로 전환합니다.
 
 이 구조에서는 frontend, backend, llm을 서로 독립적으로 배포할 수 있습니다.
+
+Backend가 LLM을 호출할 때는 `llm-blue` 또는 `llm-green`을 직접 바라보지 않습니다. 두 이름 중 하나를 `.env`에 고정하면 LLM active color가 바뀔 때 backend가 old color를 계속 호출할 수 있기 때문입니다.
+
+운영에서는 Docker 내부 전용 nginx listener를 통해 active LLM으로 라우팅합니다.
+
+```text
+backend-blue/green
+  -> http://nginx:8080/llm/analyze
+  -> nginx 내부 listener
+  -> llm-${LLM_ACTIVE}:8000
+```
+
+따라서 production 환경변수는 아래처럼 유지합니다.
+
+```text
+SUPERMARIO_LLM_BASE_URL=http://nginx:8080/llm
+SUPERMARIO_LLM_ANALYZE_URL=http://nginx:8080/llm/analyze
+SUPERMARIO_LLM_MAINTENANCE_LOG_URL=http://nginx:8080/llm/maintenance/log/
+```
+
+`nginx:8080`은 Docker 내부 네트워크에서만 사용하는 주소이며, 외부에는 `80/443`만 공개합니다.
 
 ## HTTPS
 

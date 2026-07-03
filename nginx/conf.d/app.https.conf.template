@@ -42,19 +42,37 @@ server {
     set $backend_url http://backend-__BACKEND_ACTIVE__:8000;
     set $llm_url http://llm-__LLM_ACTIVE__:8000;
 
-    location /admin/ {
-        proxy_pass $backend_url;
-    }
-
     location /api/ws/ {
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
         proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering off;
         proxy_pass $backend_url;
     }
 
     location /api/ {
+        proxy_pass $backend_url;
+    }
+
+    location /admin/ {
+        proxy_pass $backend_url;
+    }
+
+    location /engine/ {
+        proxy_pass $backend_url;
+    }
+
+    location /editor/ {
+        proxy_pass $backend_url;
+    }
+
+    location /ws/ {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 3600s;
         proxy_pass $backend_url;
     }
 
@@ -64,5 +82,24 @@ server {
 
     location / {
         proxy_pass $frontend_url;
+    }
+}
+
+server {
+    listen 8080;
+    server_name _;
+
+    resolver 127.0.0.11 valid=30s ipv6=off;
+
+    client_max_body_size 50m;
+
+    set $llm_url http://llm-__LLM_ACTIVE__:8000;
+
+    location /llm/ {
+        proxy_pass $llm_url;
+    }
+
+    location / {
+        return 404;
     }
 }

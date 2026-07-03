@@ -93,27 +93,16 @@ set +a
 TARGET_SERVICE="${SERVICE}-${TARGET}"
 
 docker_compose -f docker-compose.prod.yml pull "$TARGET_SERVICE"
-docker_compose -f docker-compose.prod.yml stop "$TARGET_SERVICE" >/dev/null 2>&1 || true
-docker_compose -f docker-compose.prod.yml rm -f "$TARGET_SERVICE" >/dev/null 2>&1 || true
+docker_compose -f docker-compose.prod.yml rm -sf "$TARGET_SERVICE" >/dev/null 2>&1 || true
 docker_compose -f docker-compose.prod.yml up -d postgres redis "$TARGET_SERVICE"
 
 scripts/healthcheck.sh "$SERVICE" "$TARGET"
 
 upsert_env runtime/active-colors.env "$ACTIVE_KEY" "$TARGET"
-NGINX_MODE_EFFECTIVE="${NGINX_MODE:-https}"
-if [ "$NGINX_MODE_EFFECTIVE" = "https" ] && ! scripts/has-letsencrypt-cert.sh; then
-  echo "Let's Encrypt certificate for ${DOMAIN:-supermario.o-r.kr} is not initialized yet. Rendering nginx in http mode."
-  NGINX_MODE_EFFECTIVE="http"
-fi
+scripts/render-nginx.sh "${NGINX_MODE:-https}"
 
-scripts/render-nginx.sh "$NGINX_MODE_EFFECTIVE"
-
-NGINX_SERVICES=(nginx)
-if [ "$NGINX_MODE_EFFECTIVE" = "https" ]; then
-  NGINX_SERVICES+=(certbot)
-fi
-
-docker_compose -f docker-compose.prod.yml up -d "${NGINX_SERVICES[@]}"
+docker_compose -f docker-compose.prod.yml up -d --no-recreate nginx certbot
+docker_compose -f docker-compose.prod.yml exec -T nginx nginx -t
 if ! docker_compose -f docker-compose.prod.yml exec -T nginx nginx -s reload; then
   docker_compose -f docker-compose.prod.yml restart nginx
 fi

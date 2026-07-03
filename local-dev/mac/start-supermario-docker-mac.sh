@@ -1,0 +1,243 @@
+#!/usr/bin/env sh
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+LOCAL_DEV_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+INFRA_DIR=$(CDPATH= cd -- "$LOCAL_DEV_DIR/.." && pwd)
+PROJECT_ROOT=$(CDPATH= cd -- "$INFRA_DIR/.." && pwd)
+COMPOSE_FILE="$LOCAL_DEV_DIR/docker-compose.local.yml"
+LOCAL_COMPOSE_ENV_FILE="$LOCAL_DEV_DIR/local-dev.compose.env"
+INFRA_ENV_FILE="$INFRA_DIR/.env"
+INFRA_ENV_EXAMPLE="$INFRA_DIR/.env.example"
+
+print_usage() {
+  cat <<'EOF'
+Usage:
+  ./start-supermario-docker-mac.sh [host-mode] [command]
+
+Host modes:
+  localhost  Use localhost URLs. Default.
+  ip         Detect this Mac's LAN IP and expose URLs for phone testing.
+
+Commands:
+  up          Build and start all local services in the background. Default.
+  start       Same as up.
+  foreground  Build and start all local services in the foreground.
+  logs        Follow logs.
+  ps          Show container status.
+  stop        Stop containers without removing them.
+  down        Stop and remove containers.
+  rebuild     Rebuild and recreate containers.
+
+Local URLs:
+  React:   http://localhost:5173
+  Django:  http://localhost:8000/api/engine/health
+  LLM:     http://localhost:8001/llm/health
+
+Examples:
+  ./mac/start-supermario-docker-mac.sh localhost up
+  ./mac/start-supermario-docker-mac.sh ip up
+EOF
+}
+
+die() {
+  printf '%s\n' "$*" >&2
+  exit 1
+}
+
+print_compose_start_failure_help() {
+  cat >&2 <<'EOF'
+
+Docker Compose start failed. Check the Docker error above first.
+
+If the error says "failed to fetch oauth token" or "401 Unauthorized",
+refresh Docker Desktop's Docker Hub credentials:
+
+  docker logout
+  docker login
+
+Then rerun:
+
+  ./mac/start-supermario-docker-mac.sh up
+
+EOF
+}
+
+detect_lan_ip() {
+  local interface ip
+
+  interface=$(route get 8.8.8.8 2>/dev/null | awk '/interface:/{print $2; exit}') || true
+  if [ -n "${interface:-}" ]; then
+    ip=$(ipconfig getifaddr "$interface" 2>/dev/null || true)
+    if [ -n "${ip:-}" ]; then
+      printf '%s\n' "$ip"
+      return 0
+    fi
+  fi
+
+  ip=$(ipconfig getifaddr en0 2>/dev/null || true)
+  if [ -n "${ip:-}" ]; then
+    printf '%s\n' "$ip"
+    return 0
+  fi
+
+  ip=$(ipconfig getifaddr en1 2>/dev/null || true)
+  if [ -n "${ip:-}" ]; then
+    printf '%s\n' "$ip"
+    return 0
+  fi
+
+  return 1
+}
+
+require_dir() {
+  local path label
+  path=$1
+  label=$2
+
+  [ -d "$path" ] || die "Missing $label directory: $path"
+}
+
+require_file() {
+  local path label
+  path=$1
+  label=$2
+
+  [ -f "$path" ] || die "Missing $label: $path. Pull the latest matching repo or check the Team_SuperMario folder layout."
+}
+
+cd "$LOCAL_DEV_DIR"
+
+[ -f "$COMPOSE_FILE" ] || die "Missing compose file: $COMPOSE_FILE"
+require_dir "$PROJECT_ROOT/SuperMario_Django/backend" "Django backend"
+require_dir "$PROJECT_ROOT/SuperMario_React" "React frontend"
+require_dir "$PROJECT_ROOT/SuperMario_LLM" "LLM server"
+require_file "$PROJECT_ROOT/SuperMario_Django/backend/manage.py" "Django manage.py"
+require_file "$PROJECT_ROOT/SuperMario_Django/backend/requirements.txt" "Django requirements.txt"
+require_file "$PROJECT_ROOT/SuperMario_React/package.json" "React package.json"
+require_file "$PROJECT_ROOT/SuperMario_React/package-lock.json" "React package-lock.json"
+require_file "$PROJECT_ROOT/SuperMario_LLM/main.py" "LLM main.py"
+require_file "$PROJECT_ROOT/SuperMario_LLM/requirements.txt" "LLM requirements.txt"
+
+if [ ! -f "$LOCAL_COMPOSE_ENV_FILE" ]; then
+  : > "$LOCAL_COMPOSE_ENV_FILE"
+fi
+
+if ! command -v docker >/dev/null 2>&1; then
+  die "Docker is not installed. Install Docker Desktop first."
+fi
+
+if ! docker info >/dev/null 2>&1; then
+  die "Docker is not running. Start Docker Desktop and try again."
+fi
+
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+  COMPOSE="docker-compose"
+else
+  die "Docker Compose is not available. Install or update Docker Desktop."
+fi
+
+if [ ! -f "$INFRA_ENV_FILE" ]; then
+  if [ -f "$INFRA_ENV_EXAMPLE" ]; then
+    cp "$INFRA_ENV_EXAMPLE" "$INFRA_ENV_FILE"
+    printf 'Created %s from .env.example. Fill OPENAI_API_KEY and Telegram values if LLM calls need them.\n' "$INFRA_ENV_FILE"
+  else
+    cat > "$INFRA_ENV_FILE" <<'EOF'
+COMPOSE_PROJECT_NAME=supermario
+OPENAI_API_KEY=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+EOF
+    printf 'Created default %s. Fill OPENAI_API_KEY and Telegram values if LLM calls need them.\n' "$INFRA_ENV_FILE"
+  fi
+fi
+
+if grep -Eq '^[A-Z][A-Z0-9_]*[[:space:]]*:' "$INFRA_ENV_FILE"; then
+  die "$INFRA_ENV_FILE looks like YAML. Convert it to KEY=VALUE .env format before starting local Docker."
+fi
+
+HOST_MODE=${SUPERMARIO_HOST_MODE:-localhost}
+COMMAND=${1:-up}
+
+case "${1:-}" in
+  localhost|ip)
+    HOST_MODE=$1
+    COMMAND=${2:-up}
+    ;;
+esac
+
+case "$HOST_MODE" in
+  localhost)
+    export LOCAL_DEV_HOST_IP=localhost
+    ;;
+  ip)
+    LOCAL_IP=$(detect_lan_ip) || die "Could not detect this Mac's LAN IP. Check Wi-Fi/network connection."
+    export LOCAL_DEV_HOST_IP="$LOCAL_IP"
+    ;;
+  *)
+    die "Unknown host mode: $HOST_MODE. Use localhost or ip."
+    ;;
+esac
+
+REACT_URL="http://${LOCAL_DEV_HOST_IP}:5173"
+DJANGO_HEALTH_URL="http://${LOCAL_DEV_HOST_IP}:8000/api/engine/health"
+LLM_HEALTH_URL="http://${LOCAL_DEV_HOST_IP}:8001/llm/health"
+
+case "$COMMAND" in
+  up|start)
+    if ! $COMPOSE --env-file "$LOCAL_COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" up --build -d; then
+      print_compose_start_failure_help
+      exit 1
+    fi
+    $COMPOSE --env-file "$LOCAL_COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" ps
+    cat <<EOF
+
+SuperMario local stack is starting.
+
+Mode:
+  Host:    ${HOST_MODE}
+
+Open:
+  React:   ${REACT_URL}
+  Django:  ${DJANGO_HEALTH_URL}
+  LLM:     ${LLM_HEALTH_URL}
+
+Follow logs:
+  ./mac/start-supermario-docker-mac.sh logs
+EOF
+    ;;
+  foreground)
+    if ! $COMPOSE --env-file "$LOCAL_COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" up --build; then
+      print_compose_start_failure_help
+      exit 1
+    fi
+    ;;
+  logs)
+    $COMPOSE --env-file "$LOCAL_COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" logs -f
+    ;;
+  ps|status)
+    $COMPOSE --env-file "$LOCAL_COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" ps
+    ;;
+  stop)
+    $COMPOSE --env-file "$LOCAL_COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" stop
+    ;;
+  down)
+    $COMPOSE --env-file "$LOCAL_COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" down
+    ;;
+  rebuild)
+    if ! $COMPOSE --env-file "$LOCAL_COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" up --build --force-recreate -d; then
+      print_compose_start_failure_help
+      exit 1
+    fi
+    $COMPOSE --env-file "$LOCAL_COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" ps
+    ;;
+  -h|--help|help)
+    print_usage
+    ;;
+  *)
+    print_usage
+    exit 2
+    ;;
+esac
