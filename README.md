@@ -4,6 +4,10 @@
 
 React, Django, LLM 서버는 각각의 서비스 레포에서 Docker image를 만들고 GHCR에 push합니다. 이 레포는 그 image들을 운영 서버에서 조합해 실행하고, nginx reverse proxy, HTTPS, PostgreSQL, Redis, Blue/Green 배포, 백업/복구 스크립트를 관리합니다.
 
+## 데모
+
+- 운영 데모: [https://supermario.o-r.kr/demo/admin](https://supermario.o-r.kr/demo/admin)
+
 ## 한눈에 보기
 
 ```mermaid
